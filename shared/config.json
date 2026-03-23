@@ -1,0 +1,32 @@
+{
+  "feishu": {
+    "app_id": "cli_a90560c5a239dbd6",
+    "app_secret_env": "FEISHU_APP_SECRET",
+    "folder_token": "T257f7rBel8LEvd1A5gcbKrznke",
+    "doc_name_pattern": "MMDD 标题关键词"
+  },
+  "style_db": {
+    "path": "shared/style_db.json",
+    "confidence_threshold": 0.6
+  },
+  "content_log": {
+    "path": "shared/content_log.json"
+  },
+  "persona": {
+    "path": "shared/persona.json"
+  },
+  "platforms": {
+    "wechat_video": {
+      "max_title_length": 30,
+      "max_description_length": 1000,
+      "max_tags": 10,
+      "script_target_length": 1000
+    },
+    "douyin": {
+      "max_title_length": 55,
+      "max_description_length": 500,
+      "max_tags": 10,
+      "script_target_length_ratio": 0.82
+    }
+  }
+}

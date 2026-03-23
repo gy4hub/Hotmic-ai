@@ -1,0 +1,47 @@
+{
+  "account_id": "default",
+  "positioning": {
+    "one_liner": "[身份] + [讲什么] + [讲给谁]",
+    "identity": "请替换为创作者身份",
+    "topic": "请替换为内容领域",
+    "audience": "请替换为目标受众"
+  },
+  "capability_boundary": {
+    "can_discuss": [
+      "请填写能讲的话题领域"
+    ],
+    "never_touch": [
+      "请填写绝对不碰的话题"
+    ]
+  },
+  "dual_audience_model": {
+    "decision_layer": {
+      "who": "决策层受众描述",
+      "drives": "选题方向"
+    },
+    "spread_layer": {
+      "who": "传播层受众描述",
+      "drives": "语言风格"
+    }
+  },
+  "content_mix": {
+    "lines": [
+      {
+        "name": "主线一",
+        "weight": 0.5,
+        "description": "描述"
+      },
+      {
+        "name": "主线二",
+        "weight": 0.3,
+        "description": "描述"
+      },
+      {
+        "name": "主线三",
+        "weight": 0.2,
+        "description": "描述"
+      }
+    ]
+  },
+  "creator_notes": "创作者个性化备注"
+}
