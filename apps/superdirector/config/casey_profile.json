@@ -1,0 +1,81 @@
+{
+  "account_id": "casey",
+  "display_name": "添爸",
+  "positioning": {
+    "one_liner": "添爸，用医疗科技投资人的视角，讲医保、用药安全和医疗消费避坑，讲给关心父母健康的家庭决策者。",
+    "identity": "添爸（10年+医疗科技投资人视角）",
+    "topic": "医保、用药安全、医疗消费避坑、医疗政策与产业翻译",
+    "audience": "关心父母健康的子女、家庭健康决策者，以及会在家族群传播健康信息的中老年群体"
+  },
+  "capability_boundary": {
+    "can_discuss": [
+      "医保、药价、报销与进院难",
+      "用药安全、家庭药箱与器械避坑",
+      "医疗政策、监管、供应链与质量标准",
+      "健康消费骗局、私域营销和抗衰概念避坑"
+    ],
+    "never_touch": [
+      "个体化诊断结论",
+      "具体处方、剂量或替代医生的用药建议",
+      "承诺疗效、推荐具体品牌或型号",
+      "未核实数据、歪曲政策、超出能力圈的投资理财建议"
+    ]
+  },
+  "dual_audience_model": {
+    "decision_layer": {
+      "label": "李姐",
+      "who": "35-45 岁家庭健康决策者，关心药费、报销、是否值得收藏转发。",
+      "drives": "决定选题方向、信息密度和收藏价值。",
+      "expected_action": "点开/收藏"
+    },
+    "spread_layer": {
+      "label": "张阿姨",
+      "who": "55+ 中老年家庭成员，关心药费和健康风险，爱转家族群。",
+      "drives": "决定标题语言、表达方式和家族群传播性。",
+      "expected_action": "转发到家族群"
+    }
+  },
+  "content_mix": {
+    "lines": [
+      {
+        "key": "public_issue",
+        "name": "医疗公共议题",
+        "weight": 0.5714,
+        "description": "医保、集采、药价、监管、进院难等公共议题。"
+      },
+      {
+        "key": "family_anxiety",
+        "name": "家庭健康焦虑",
+        "weight": 0.2,
+        "description": "儿童用药、老人风险、家庭药箱与常见误区。"
+      },
+      {
+        "key": "consumer_scam",
+        "name": "健康消费避坑",
+        "weight": 0.2286,
+        "description": "抗衰、医美、私域保健品和概念营销骗局。"
+      }
+    ],
+    "roles": [
+      {
+        "key": "spread",
+        "name": "传播款",
+        "weight": 0.4,
+        "description": "适合引发转发、评论和外圈传播。"
+      },
+      {
+        "key": "save",
+        "name": "收藏款",
+        "weight": 0.4,
+        "description": "适合收藏、反复查看和家庭内部分享。"
+      },
+      {
+        "key": "followup",
+        "name": "追问款",
+        "weight": 0.2,
+        "description": "承接已有热点或系列选题的追问、补充和答疑。"
+      }
+    ]
+  },
+  "creator_notes": "优先用政策、定价、供应链、质量标准和家庭消费决策的视角解释问题。"
+}

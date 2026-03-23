@@ -46,7 +46,7 @@ STYLE_DB_SCHEMA = {
     "required": ["version", "rules"],
     "rules": {
         "type": "list",
-        "each_required": ["description", "confidence"]
+        "each_required": ["confidence"]
     }
 }
 
@@ -54,7 +54,7 @@ CONTENT_LOG_SCHEMA = {
     "required": ["version", "entries"],
     "entries": {
         "type": "list",
-        "each_required": ["title", "date"]
+        "each_required": ["title"]
     }
 }
 
@@ -152,6 +152,13 @@ def validate_style_db(data: dict) -> list[str]:
                     STYLE_DB_SCHEMA["rules"]["each_required"],
                     f"style_db.rules[{i}]"
                 ))
+                if not isinstance(rule, dict):
+                    errors.append(f"[style_db.rules[{i}]] 应为对象")
+                    continue
+                if not (rule.get("rule") or rule.get("description")):
+                    errors.append(
+                        f"[style_db.rules[{i}]] 至少应包含 'rule' 或 'description' 字段"
+                    )
                 # 置信度范围检查
                 confidence = rule.get("confidence")
                 if confidence is not None:
@@ -180,6 +187,13 @@ def validate_content_log(data: dict) -> list[str]:
                     CONTENT_LOG_SCHEMA["entries"]["each_required"],
                     f"content_log.entries[{i}]"
                 ))
+                if not isinstance(entry, dict):
+                    errors.append(f"[content_log.entries[{i}]] 应为对象")
+                    continue
+                if not (entry.get("date") or entry.get("created_at")):
+                    errors.append(
+                        f"[content_log.entries[{i}]] 至少应包含 'date' 或 'created_at' 字段"
+                    )
 
     return errors
 

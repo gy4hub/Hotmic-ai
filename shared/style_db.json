@@ -1,10 +1,24 @@
 {
   "version": "1.0",
-  "last_updated": "",
+  "last_updated": "2026-03-24",
   "statistics": {
     "total_diffs_analyzed": 0,
     "avg_edit_ratio": 0.0,
     "edit_ratio_history": []
   },
-  "rules": []
+  "rules": [
+    {
+      "id": "style_001",
+      "category": "review_patch",
+      "rule": "建议默认控制视频时长在3分钟以内",
+      "confidence": 0.8,
+      "source_diffs": [
+        "review_patch"
+      ],
+      "created_at": "2026-03-24",
+      "last_validated": "2026-03-24",
+      "status": "candidate",
+      "evidence": "短视频完播率更高"
+    }
+  ]
 }
