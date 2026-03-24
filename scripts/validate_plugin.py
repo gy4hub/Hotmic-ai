@@ -16,6 +16,7 @@ SKILL_PATHS = (
     ROOT_DIR / "apps" / "style-learner" / "SKILL.md",
     ROOT_DIR / "apps" / "superdirector" / "SKILL.md",
 )
+SKILL_SHARED_PATH_PREFIX = "../../shared/"
 
 
 def load_plugin() -> dict:
@@ -58,8 +59,19 @@ def validate_plugin_paths(plugin: dict) -> None:
             raise ValueError(f"Plugin skill {skill.get('id')} must define triggers")
 
 
-def validate_skills() -> None:
+def _normalize_str_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
+def validate_skills(plugin: dict) -> None:
     command_names: set[str] = set()
+    plugin_skills_by_path = {
+        str(skill.get("path")): skill
+        for skill in plugin.get("skills") or []
+        if isinstance(skill, dict) and skill.get("path")
+    }
     for path in SKILL_PATHS:
         data = load_frontmatter(path)
         metadata = data.get("metadata") or {}
@@ -70,6 +82,11 @@ def validate_skills() -> None:
         cowork = metadata.get("cowork") or {}
         if not isinstance(openclaw, dict) or not isinstance(cowork, dict):
             raise ValueError(f"{path} openclaw/cowork metadata must be mappings")
+
+        rel_path = str(path.parent.relative_to(ROOT_DIR))
+        plugin_skill = plugin_skills_by_path.get(rel_path)
+        if plugin_skill is None:
+            raise ValueError(f"{path} is not declared in plugin.json")
 
         commands = openclaw.get("commands") or []
         if not isinstance(commands, list) or not commands:
@@ -88,11 +105,34 @@ def validate_skills() -> None:
         if len(examples) < 2:
             raise ValueError(f"{path} must define at least two cowork examples")
 
+        plugin_env = sorted(_normalize_str_list(plugin_skill.get("env")))
+        skill_env = sorted(_normalize_str_list(openclaw.get("env")))
+        if plugin_env != skill_env:
+            raise ValueError(
+                f"{path} env metadata does not match plugin.json: {plugin_env} != {skill_env}"
+            )
+
+        if plugin_skill.get("type") == "service":
+            plugin_service_command = str(plugin_skill.get("service_command") or "").strip()
+            cowork_service_command = str(cowork.get("service_command") or "").strip()
+            if not plugin_service_command or not cowork.get("requires_service"):
+                raise ValueError(f"{path} service skill metadata is incomplete")
+            if plugin_service_command != cowork_service_command:
+                raise ValueError(f"{path} service_command does not match plugin.json")
+            if not str(cowork.get("health_check") or "").strip():
+                raise ValueError(f"{path} service skill must define cowork.health_check")
+
+        body = path.read_text(encoding="utf-8")
+        if "../shared/" in body and SKILL_SHARED_PATH_PREFIX not in body and "shared/config.json" not in body:
+            raise ValueError(
+                f"{path} still references legacy ../shared paths; use {SKILL_SHARED_PATH_PREFIX}"
+            )
+
 
 def main() -> int:
     plugin = load_plugin()
     validate_plugin_paths(plugin)
-    validate_skills()
+    validate_skills(plugin)
     print("plugin packaging validated")
     return 0
 

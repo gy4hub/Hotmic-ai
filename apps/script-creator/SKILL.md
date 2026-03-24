@@ -42,7 +42,7 @@ metadata:
 
 ```bash
 # 加载风格规则（创作前必须执行）
-python scripts/load_style_rules.py --db ../shared/style_db.json
+python scripts/load_style_rules.py --db ../../shared/style_db.json
 
 # 创作完成后生成发布包
 python scripts/generate_publish_pack.py --input output/script.md --output output/publish_pack/
@@ -75,4 +75,4 @@ hotmic-script-creator/
 - `output/publish_pack/wechat_video.txt` — 视频号复制粘贴包
 - `output/publish_pack/douyin.txt` — 抖音复制粘贴包
 
-执行完成后，内容条目自动写入 `../shared/content_log.json`。
+执行完成后，内容条目自动写入 `../../shared/content_log.json`。

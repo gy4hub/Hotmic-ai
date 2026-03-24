@@ -54,7 +54,7 @@ python scripts/generate_publish_pack.py --input output/script.md --output output
 export FEISHU_APP_SECRET="your_feishu_app_secret"
 ```
 
-App ID 和 folder token 已在 `../shared/config.json` 中配置：
+App ID 和 folder token 已在 `../../shared/config.json` 中配置：
 - App ID: `cli_a90560c5a239dbd6`
 - 目标文件夹 Token: `T257f7rBel8LEvd1A5gcbKrznke`
 

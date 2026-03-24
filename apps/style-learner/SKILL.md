@@ -47,12 +47,12 @@ metadata:
 python scripts/update_style_db.py \
   --original output/script.md \
   --revised revised_script.md \
-  --db ../shared/style_db.json
+  --db ../../shared/style_db.json
 ```
 
 ### 手动校准模式（用户主动调用）
 ```bash
-python scripts/calibrate.py --db ../shared/style_db.json
+python scripts/calibrate.py --db ../../shared/style_db.json
 ```
 
 ## 文件结构
@@ -73,4 +73,4 @@ hotmic-style-learner/
 
 ## 数据存储
 
-所有规则存储在 `../shared/style_db.json`，格式见 `references/diff_categories.md`。
+所有规则存储在 `../../shared/style_db.json`，格式见 `references/diff_categories.md`。

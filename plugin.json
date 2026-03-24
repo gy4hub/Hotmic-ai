@@ -47,7 +47,16 @@
       "name": "选题引擎",
       "type": "service",
       "triggers": ["选题", "今日热点", "看看有什么好选题", "帮我找选题"],
-      "service_command": "cd apps/superdirector && python -m uvicorn main:app --host 127.0.0.1 --port 8100"
+      "env": [
+        "GEMINI_API_KEY",
+        "QWEN_API_KEY",
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_CHAT_ID",
+        "BRAVE_SEARCH_API_KEY",
+        "BRAVE_SEARCH_API_KEY_2",
+        "TAVILY_API_KEY"
+      ],
+      "service_command": "cd apps/superdirector && ./.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8100"
     }
   ],
   "shared_config": "shared/",

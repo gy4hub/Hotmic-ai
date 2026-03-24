@@ -25,10 +25,12 @@ metadata:
     dependencies:
       - python3
     env:
+      - GEMINI_API_KEY
       - TELEGRAM_BOT_TOKEN
       - TELEGRAM_CHAT_ID
       - QWEN_API_KEY
       - BRAVE_SEARCH_API_KEY
+      - BRAVE_SEARCH_API_KEY_2
       - TAVILY_API_KEY
     tags:
       - topic-discovery
@@ -40,7 +42,7 @@ metadata:
     requires_files: false
     output_format: json
     requires_service: true
-    service_command: cd apps/superdirector && python -m uvicorn main:app --host 127.0.0.1 --port 8100
+    service_command: cd apps/superdirector && ./.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8100
     health_check: http://127.0.0.1:8100/health
     examples:
       - 帮我跑一轮今天的选题
@@ -60,7 +62,7 @@ SuperDirector 是 HotMic AI 的选题源头模块。它负责多信源采集、A
 
 ```bash
 cd apps/superdirector
-python -m uvicorn main:app --host 127.0.0.1 --port 8100
+./.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8100
 ```
 
 ### 模式 B：作为 skill 手动触发
