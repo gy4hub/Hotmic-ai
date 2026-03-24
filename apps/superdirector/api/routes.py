@@ -315,18 +315,18 @@ def _sd_platform_to_hotmic(platform: str | None) -> str:
     normalized = str(platform or "").strip().lower()
     if normalized in {"wechat_video", "shipinhao"}:
         return "wechat_video"
-    if normalized == "douyin":
-        return "douyin"
-    if normalized == "xiaohongshu":
-        return "douyin"
+    if normalized in {"douyin", "xiaohongshu"}:
+        return normalized
     return "douyin"
 
 
 def _hotmic_platform_to_sd(platform: str | None) -> str:
-    normalized = _sd_platform_to_hotmic(platform)
-    if normalized == "wechat_video":
+    normalized = str(platform or "").strip().lower()
+    if normalized in {"wechat_video", "shipinhao"}:
         return "shipinhao"
-    return normalized
+    if normalized in {"douyin", "xiaohongshu"}:
+        return normalized
+    return "douyin"
 
 
 def _source_bucket(source: str | None) -> str:

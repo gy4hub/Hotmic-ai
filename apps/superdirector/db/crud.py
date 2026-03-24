@@ -254,7 +254,7 @@ async def get_today_topics(session: AsyncSession, date_str: str) -> list[Topic]:
     stmt = (
         select(Topic)
         .where(Topic.date == date_str)
-        .order_by(desc(Topic.score_total), desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)))
+        .order_by(desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)), desc(Topic.score_total))
     )
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -303,7 +303,7 @@ async def get_topics_for_run(
     stmt = (
         select(Topic)
         .where(Topic.pipeline_run_id == run_id)
-        .order_by(desc(Topic.score_total), desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)))
+        .order_by(desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)), desc(Topic.score_total))
     )
     if limit:
         stmt = stmt.limit(limit)
@@ -322,7 +322,7 @@ async def get_output_topics_for_run(
         .where(Topic.pipeline_run_id == run_id)
         .where(Topic.reject_type.is_(None) | (Topic.reject_type == "none"))
         .where(Topic.selection_rank_reason.is_not(None))
-        .order_by(desc(Topic.score_total), desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)))
+        .order_by(desc(func.coalesce(Topic.editorial_priority_score, Topic.score_total)), desc(Topic.score_total))
     )
     if limit:
         stmt = stmt.limit(limit)

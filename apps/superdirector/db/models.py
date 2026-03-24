@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import (
     Column,
     Integer,
@@ -15,11 +15,15 @@ class Base(DeclarativeBase):
     pass
 
 
+def _utc_now_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class PipelineRun(Base):
     __tablename__ = "pipeline_runs"
 
     id = Column(Integer, primary_key=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=_utc_now_naive)
     finished_at = Column(DateTime)
     status = Column(String(32), default="running")
     topics_count = Column(Integer, default=0)
@@ -116,8 +120,8 @@ class Topic(Base):
     # Group G (system metadata)
     pipeline_run_id = Column(Integer, ForeignKey("pipeline_runs.id"))
     model_version = Column(String(64))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now_naive)
+    updated_at = Column(DateTime, default=_utc_now_naive)
 
     errors_json = Column(Text)
     frame_json = Column(Text)
@@ -141,7 +145,7 @@ class ApiCostLog(Base):
     __tablename__ = "api_cost_log"
 
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utc_now_naive)
     provider = Column(String(32))
     model = Column(String(64))
     endpoint = Column(Text)
@@ -154,7 +158,7 @@ class SystemLog(Base):
     __tablename__ = "system_logs"
 
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utc_now_naive)
     level = Column(String(16))
     module = Column(String(64))
     message = Column(Text)
@@ -173,8 +177,8 @@ class BitableSyncTask(Base):
     attempts = Column(Integer, default=0, nullable=False)
     error_message = Column(Text)
     last_attempted_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now_naive)
+    updated_at = Column(DateTime, default=_utc_now_naive)
 
 
 class ScheduleJob(Base):
@@ -208,8 +212,8 @@ class PlatformFeedback(Base):
     completion_rate = Column(Float)
     raw_json = Column(Text)
     error_message = Column(Text)
-    collected_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    collected_at = Column(DateTime, default=_utc_now_naive)
+    updated_at = Column(DateTime, default=_utc_now_naive)
 
 
 class RawCandidate(Base):
@@ -222,6 +226,6 @@ class RawCandidate(Base):
     url = Column(Text)
     snippet = Column(Text)
     published_at = Column(String(64))
-    collected_at = Column(DateTime, default=datetime.utcnow)
+    collected_at = Column(DateTime, default=_utc_now_naive)
     fingerprint = Column(String(128), index=True)
     status = Column(String(32), default="pending", nullable=False)

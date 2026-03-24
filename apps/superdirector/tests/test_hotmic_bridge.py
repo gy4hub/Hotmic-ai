@@ -85,6 +85,34 @@ def test_build_hotmic_script_payload_maps_topic_to_hotmic_input(monkeypatch):
     assert payload["compliance_context"]["verified_facts"]
 
 
+def test_build_hotmic_script_payload_preserves_xiaohongshu_platform(monkeypatch):
+    monkeypatch.setattr(
+        api_routes,
+        "load_casey_profile",
+        lambda: {"account_id": "casey", "display_name": "添爸"},
+    )
+    monkeypatch.setattr(api_routes, "_load_high_confidence_style_rules", lambda *args, **kwargs: [])
+    row = SimpleNamespace(
+        topic_id="topic-xhs",
+        title="医保卡别借给别人买药",
+        summary="小红书平台也需要保留平台语义。",
+        keywords='["医保卡"]',
+        url="https://example.com/xhs",
+        search_sources="[]",
+        source="wechat_rss",
+        content_role="spread",
+        platform_priority="xiaohongshu",
+        frame_json='{"hook":"别把医保卡借出去","outline":["为什么","风险在哪","如何识别","结论"],"cta":"转给家里人"}',
+        raw_snippet="医保卡外借会留下购药记录。",
+        compliance_risk="low",
+        actionability_risk="low",
+    )
+
+    payload = api_routes._build_hotmic_script_payload(row)
+
+    assert payload["platform_priority"] == "xiaohongshu"
+
+
 def test_topics_publish_confirm_updates_topic_and_bitable(monkeypatch):
     updated_payloads = []
     bitable_updates = []
@@ -173,6 +201,90 @@ def test_topics_publish_confirm_updates_topic_and_bitable(monkeypatch):
     assert bitable_updates[0]["publish_url"] == "https://channels.weixin.qq.com/example"
     assert result["script_path"] == "/tmp/script.md"
     assert result["topic"]["publish_status"] == "published"
+
+
+def test_topics_publish_confirm_preserves_xiaohongshu_platform(monkeypatch):
+    updated_payloads = []
+
+    row = SimpleNamespace(
+        id=9,
+        topic_id="topic-xhs-1",
+        date="2026-03-23",
+        title="小红书标题",
+        score_total=4.2,
+        editorial_priority_score=4.7,
+        platform_priority="xiaohongshu",
+        summary="摘要",
+        source="wechat_rss",
+        timestamp="2026-03-23T12:00:00Z",
+        raw_snippet="片段",
+        keywords='["医保"]',
+        url="https://example.com",
+        topic_line_primary="family_anxiety",
+        topic_line_secondary=None,
+        line_confidence=0.8,
+        content_role="save",
+        creator_fit="strong",
+        li_jie_value="save",
+        zhang_auntie_value="watch",
+        audience_core="family_decision_maker",
+        compliance_risk="low",
+        actionability_risk="low",
+        topic_cluster="家庭药箱",
+        reject_type="none",
+        rejection_reason=None,
+        timeliness_window="evergreen",
+        platform_fit="xiaohongshu",
+        decision_impact_level="medium",
+        selection_rank_reason="适合种草避坑",
+        status="ok",
+        errors_json="[]",
+        creator_ops=None,
+        publish_status=None,
+        publish_url=None,
+        publish_at=None,
+    )
+
+    async def fake_get_topic_by_topic_id(_session, topic_id):
+        assert topic_id == "topic-xhs-1"
+        return row
+
+    async def fake_update_topic_feedback(_session, topic_id, payload):
+        updated_payloads.append((topic_id, payload))
+        for key, value in payload.items():
+            setattr(row, key, value)
+        return row
+
+    async def fake_upsert_bitable_feedback(_client, payloads):
+        return {"updated": len(payloads), "errors": []}
+
+    class DummySession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(api_routes.crud, "get_topic_by_topic_id", fake_get_topic_by_topic_id)
+    monkeypatch.setattr(api_routes.crud, "update_topic_feedback", fake_update_topic_feedback)
+    monkeypatch.setattr(api_routes, "_upsert_bitable_feedback", fake_upsert_bitable_feedback)
+    monkeypatch.setattr(api_routes, "AsyncSessionLocal", lambda: DummySession())
+
+    result = asyncio.run(
+        api_routes.topics_publish_confirm(
+            "topic-xhs-1",
+            DummyRequest(
+                {
+                    "platform": "xiaohongshu",
+                    "publish_url": "https://www.xiaohongshu.com/explore/abc123",
+                    "publish_at": "2026-03-23T20:00:00+08:00",
+                }
+            ),
+        )
+    )
+
+    assert updated_payloads[0][1]["platform_priority"] == "xiaohongshu"
+    assert result["topic"]["platform_priority"] == "xiaohongshu"
 
 
 def test_topics_today_create_script_uses_ranked_topic(monkeypatch):

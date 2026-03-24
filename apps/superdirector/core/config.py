@@ -35,10 +35,22 @@ def _find_workspace_dir(start: Path) -> Path:
     return start
 
 
+def _default_media_crawler_dir() -> str:
+    candidates = (
+        WORKSPACE_DIR.parent / "MediaCrawler",
+        WORKSPACE_DIR / "MediaCrawler",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return ""
+
+
 MODULE_DIR = Path(__file__).resolve().parent
 BASE_DIR = MODULE_DIR.parent
 WORKSPACE_DIR = _find_workspace_dir(BASE_DIR)
 CONFIG_DIR = BASE_DIR / "config"
+USER_HOME = Path.home()
 
 DEFAULT_CASEY_PROFILE: dict[str, Any] = {
     "account_id": "casey",
@@ -244,7 +256,7 @@ BRAVE_SEARCH_API_KEYS = _unique_nonempty(
 )
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 TAVILY_ENABLED = _env_bool("TAVILY_ENABLED", False)
-RSS_WECHAT = os.getenv("RSS_WECHAT", "http://192.168.31.224:4000/feeds/all.rss")
+RSS_WECHAT = os.getenv("RSS_WECHAT", "")
 RAW_POOL_LIMIT = int(os.getenv("RAW_POOL_LIMIT", "80"))
 RSS_ITEM_LIMIT = int(os.getenv("RSS_ITEM_LIMIT", "25"))
 BRAVE_QUERY_LIMIT = int(os.getenv("BRAVE_QUERY_LIMIT", "10"))
@@ -258,9 +270,12 @@ WEWE_BASE_URL = os.getenv(
     RSS_WECHAT.split("/feeds/", 1)[0] if "/feeds/" in RSS_WECHAT else "",
 )
 WEWE_AUTH_CODE = os.getenv("WEWE_AUTH_CODE")
-WEWE_PLATFORM_URL = os.getenv("WEWE_PLATFORM_URL", "http://weread.111965.xyz")
-MEDIA_CRAWLER_DIR = os.getenv("MEDIA_CRAWLER_DIR", "/home/gchyang/projects/MediaCrawler")
-MEDIA_CRAWLER_ENABLED = _env_bool("MEDIA_CRAWLER_ENABLED", Path(MEDIA_CRAWLER_DIR).exists())
+WEWE_PLATFORM_URL = os.getenv("WEWE_PLATFORM_URL", "")
+MEDIA_CRAWLER_DIR = os.getenv("MEDIA_CRAWLER_DIR", _default_media_crawler_dir())
+MEDIA_CRAWLER_ENABLED = _env_bool(
+    "MEDIA_CRAWLER_ENABLED",
+    bool(MEDIA_CRAWLER_DIR) and Path(MEDIA_CRAWLER_DIR).exists(),
+)
 MEDIA_CRAWLER_REFRESH_TIMEOUT = int(os.getenv("MEDIA_CRAWLER_REFRESH_TIMEOUT", "75"))
 MEDIA_CRAWLER_ITEM_LIMIT = int(os.getenv("MEDIA_CRAWLER_ITEM_LIMIT", "12"))
 MEDIA_CRAWLER_MAX_AGE_HOURS = int(os.getenv("MEDIA_CRAWLER_MAX_AGE_HOURS", "6"))
@@ -371,12 +386,20 @@ RSS_DISCOVERY_BASKET_SOURCES = [
 ]
 
 # Proxy
-HTTP_PROXY = os.getenv("HTTP_PROXY", "http://192.168.31.88:20172")
-HTTPS_PROXY = os.getenv("HTTPS_PROXY")
-NO_PROXY = os.getenv("NO_PROXY")
+HTTP_PROXY = os.getenv("HTTP_PROXY") or None
+HTTPS_PROXY = os.getenv("HTTPS_PROXY") or None
+NO_PROXY = os.getenv("NO_PROXY") or None
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+DOUYIN_COOKIE_PATH = os.getenv(
+    "DOUYIN_COOKIE_PATH",
+    str(USER_HOME / ".openclaw" / "hotmic-ai" / "superdirector" / ".douyin_cookie"),
+)
+SUPERDIRECTOR_SERVICE_PATH = os.getenv(
+    "SUPERDIRECTOR_SERVICE_PATH",
+    str(USER_HOME / ".config" / "systemd" / "user" / "superdirector.service"),
+)
 
 # Database
 SQLITE_PATH = os.getenv("SQLITE_PATH", str(BASE_DIR / "data" / "superdirector.db"))
@@ -441,8 +464,6 @@ def require_env() -> None:
     missing = []
     if not GEMINI_API_KEY and not QWEN_API_KEY:
         missing.append("GEMINI_API_KEY or QWEN_API_KEY")
-    if not HTTP_PROXY and not HTTPS_PROXY:
-        missing.append("HTTP_PROXY")
     if missing:
         raise RuntimeError(f"Missing required env vars: {', '.join(missing)}")
 

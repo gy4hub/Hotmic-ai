@@ -14,6 +14,7 @@ from core.config import (
     BITABLE_APP_TOKEN,
     FEISHU_BASE_URL,
     FRAMES_TABLE_ID,
+    SUPERDIRECTOR_SERVICE_PATH,
     TOPICS_TABLE_ID,
 )
 from pipeline.utils import request_with_retry
@@ -94,7 +95,7 @@ FRAMES_VIEWS = [
 
 
 def _service_path() -> Path:
-    return Path("/home/gchyang/.config/systemd/user/superdirector.service")
+    return Path(SUPERDIRECTOR_SERVICE_PATH)
 
 
 async def _headers(client: httpx.AsyncClient) -> dict[str, str]:

@@ -8,7 +8,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-from config import BITABLE_APP_TOKEN, FEISHU_BASE_URL, TOPICS_TABLE_ID
+from config import BITABLE_APP_TOKEN, DOUYIN_COOKIE_PATH as CONFIG_DOUYIN_COOKIE_PATH, FEISHU_BASE_URL, TOPICS_TABLE_ID
 from db import crud
 from db.session import AsyncSessionLocal
 from pipeline.collector import _latest_mediacrawler_file
@@ -16,7 +16,7 @@ from pipeline.utils import request_with_retry
 from tools.feishu_auth import feishu_enabled, get_tenant_access_token
 from tools.telegram_sender import send_casey_message
 
-DOUYIN_COOKIE_PATH = Path("/home/gchyang/.openclaw/superdirector/.douyin_cookie")
+DOUYIN_COOKIE_PATH = Path(CONFIG_DOUYIN_COOKIE_PATH)
 DOUYIN_WORK_LIST_URL = "https://creator.douyin.com/janus/douyin/creator/pc/work_list"
 DOUYIN_REFERER = "https://creator.douyin.com/creator-micro/content/manage"
 DOUYIN_WORK_LIST_PAGE_SIZE = 20

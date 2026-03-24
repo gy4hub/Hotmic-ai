@@ -46,8 +46,8 @@ QWEN_MODEL=qwen-plus
 GEMINI_API_KEY=...
 GEMINI_FLASH_MODEL=gemini-flash-latest
 BRAVE_SEARCH_API_KEY=...
-HTTP_PROXY=http://192.168.31.88:20172
-HTTPS_PROXY=http://192.168.31.88:20172
+HTTP_PROXY=http://your-proxy:port
+HTTPS_PROXY=http://your-proxy:port
 ```
 
 Feishu sync:

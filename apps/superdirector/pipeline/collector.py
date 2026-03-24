@@ -83,7 +83,7 @@ MEDIA_CRAWLER_SOURCE_SPECS = [
 
 RSS_SOURCES = [
     {"url": RSS_WECHAT, "source": "wechat_rss"},
-]
+] if RSS_WECHAT else []
 
 BRAVE_QUERY_SPECS = [
     {"source": "brave_search", "query": "保健品 老人 被骗 最新", "freshness": "pw"},
