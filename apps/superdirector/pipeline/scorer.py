@@ -6,6 +6,8 @@ from pipeline.scoring_config import (
     load_source_weights,
 )
 from pipeline.editorial import editorial_config_summary
+
+CLUSTER_MISMATCH_PENALTY_FACTOR = 0.85
 DIMENSION_METADATA = {
     key: {
         "label": value["label"],
@@ -29,6 +31,19 @@ SOURCE_BUCKETS = {
     "stat_pharma": "industry_media",
     "mediacrawler_douyin": "platform_native",
     "mediacrawler_xhs": "platform_native",
+    "rss_36kr": "industry_media",
+    "rss_huxiu": "industry_media",
+    "rss_ifanr": "industry_media",
+    "rss_geekpark": "industry_media",
+    "rss_dxy": "industry_media",
+    "wx_saibolan": "industry_media",
+    "wx_denglings": "industry_media",
+    "wx_xsjw": "industry_media",
+    "wx_yygc": "industry_media",
+    "wx_zhiyaoju": "industry_media",
+    "pedaily_med": "industry_media",
+    "pharmcube": "industry_media",
+    "evergreen": "trusted_rss",
 }
 def load_platform_weights() -> dict[str, dict]:
     return load_all_platform_weights()
@@ -67,6 +82,8 @@ def _source_bucket(source: str | None) -> str:
         return "other"
     if source in SOURCE_BUCKETS:
         return SOURCE_BUCKETS[source]
+    if source.startswith("competitor_"):
+        return "search"
     if source.startswith("brave_"):
         return "search"
     return "other"
@@ -76,6 +93,13 @@ def _apply_source_bonus(score_total: float, source: str | None) -> tuple[float, 
     bucket = _source_bucket(source)
     bonus = load_source_weights().get(bucket, 0.0)
     return round(score_total + bonus, 4), bucket, bonus
+
+
+def _apply_cluster_mismatch_penalty(score_total: float, cluster_mismatch: bool) -> tuple[float, float]:
+    if not cluster_mismatch:
+        return score_total, 0.0
+    penalized = round(score_total * CLUSTER_MISMATCH_PENALTY_FACTOR, 4)
+    return penalized, round(score_total - penalized, 4)
 
 
 def explain_scores(scores: dict, source: str | None) -> dict:
@@ -152,6 +176,11 @@ def score_topics(analyzed: list[dict]) -> tuple[list[dict], list[dict]]:
             score_total,
             t.get("source"),
         )
+        cluster_mismatch_penalty = 0.0
+        score_total, cluster_mismatch_penalty = _apply_cluster_mismatch_penalty(
+            score_total,
+            bool(t.get("cluster_mismatch")),
+        )
 
         scored.append(
             {
@@ -161,6 +190,8 @@ def score_topics(analyzed: list[dict]) -> tuple[list[dict], list[dict]]:
                 "score_total": score_total,
                 "source_tier": source_tier,
                 "source_weight_bonus": source_weight_bonus,
+                "cluster_mismatch": bool(t.get("cluster_mismatch")),
+                "cluster_mismatch_penalty": cluster_mismatch_penalty,
                 "score_emotion": scores.get("emotion"),
                 "score_timely": scores.get("timely"),
                 "score_subvert": scores.get("subvert"),

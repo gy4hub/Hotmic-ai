@@ -17,6 +17,19 @@ def _env_csv(name: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _env_json_list(name: str, default: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return default
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+    return default
+
+
 def _unique_nonempty(values: list[str]) -> tuple[str, ...]:
     seen: set[str] = set()
     ordered: list[str] = []
@@ -237,6 +250,14 @@ GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-flash-latest")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
 QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
+PREFILTER_ENABLED = _env_bool("PREFILTER_ENABLED", False)
+PREFILTER_MODEL = os.getenv("PREFILTER_MODEL", QWEN_MODEL)
+PREFILTER_THRESHOLD = float(os.getenv("PREFILTER_THRESHOLD", "0.3"))
+ANALYZE_MODEL = os.getenv("ANALYZE_MODEL", QWEN_MODEL)
+ANALYZE_API_KEY = os.getenv("ANALYZE_API_KEY", "")
+ANALYZE_BASE_URL = os.getenv("ANALYZE_BASE_URL", QWEN_BASE_URL)
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 USD_PER_CNY = float(os.getenv("USD_PER_CNY", "0.145"))
 
 # Feishu (reserved for later stages)
@@ -288,9 +309,11 @@ MEDIA_CRAWLER_XHS_KEYWORDS = os.getenv(
     "医保 创新药 医疗器械 体外诊断 生物科技 biotech BTIT",
 )
 SEARCH_PICKS_PER_LAYER = int(os.getenv("SEARCH_PICKS_PER_LAYER", "2"))
-ANALYZER_BATCH_SIZE = int(os.getenv("ANALYZER_BATCH_SIZE", "4"))
+ANALYZER_BATCH_SIZE = int(os.getenv("ANALYZER_BATCH_SIZE", "8"))
 ANALYZER_BATCH_CONCURRENCY = int(os.getenv("ANALYZER_BATCH_CONCURRENCY", "3"))
 QWEN_ANALYZE_TIMEOUT = float(os.getenv("QWEN_ANALYZE_TIMEOUT", "45"))
+ANALYSIS_CACHE_ENABLED = _env_bool("ANALYSIS_CACHE_ENABLED", False)
+ANALYSIS_CACHE_LOOKBACK_DAYS = int(os.getenv("ANALYSIS_CACHE_LOOKBACK_DAYS", "7"))
 PUBLIC_ISSUE_KEYWORDS = [
     "原研药 仿制药 差别",
     "医保 报销 变化",
@@ -383,7 +406,40 @@ RSS_DISCOVERY_BASKET_SOURCES = [
         ),
         "source": "rss_nyt_health",
     },
+    {
+        "url": os.getenv("RSS_36KR", "https://36kr.com/feed"),
+        "source": "rss_36kr",
+    },
+    {
+        "url": os.getenv("RSS_HUXIU", "https://rss.huxiu.com/"),
+        "source": "rss_huxiu",
+    },
+    {
+        "url": os.getenv("RSS_IFANR", "https://www.ifanr.com/feed"),
+        "source": "rss_ifanr",
+    },
+    {
+        "url": os.getenv("RSS_GEEKPARK", "http://feeds.geekpark.net/"),
+        "source": "rss_geekpark",
+    },
+    {
+        "url": os.getenv("RSS_DXY", "https://www.dxy.cn/bbs/rss/2.0/all.xml"),
+        "source": "rss_dxy",
+    },
 ]
+SITE_SEARCH_TARGETS = _env_json_list(
+    "SITE_SEARCH_TARGETS",
+    [
+        {"site": "mp.weixin.qq.com", "keyword": "赛柏蓝", "source": "wx_saibolan"},
+        {"site": "mp.weixin.qq.com", "keyword": "瞪羚社", "source": "wx_denglings"},
+        {"site": "mp.weixin.qq.com", "keyword": "学术经纬", "source": "wx_xsjw"},
+        {"site": "mp.weixin.qq.com", "keyword": "医业观察", "source": "wx_yygc"},
+        {"site": "mp.weixin.qq.com", "keyword": "智药局", "source": "wx_zhiyaoju"},
+        {"site": "pedaily.cn", "keyword": "医疗 OR 医药 OR 器械", "source": "pedaily_med"},
+        {"site": "pharmcube.com", "keyword": "", "source": "pharmcube"},
+    ],
+)
+COMPETITOR_ACCOUNTS = _env_json_list("COMPETITOR_ACCOUNTS", [])
 
 # Proxy
 HTTP_PROXY = os.getenv("HTTP_PROXY") or None
@@ -417,8 +473,17 @@ DAILY_RUN_HOUR = int(os.getenv("DAILY_RUN_HOUR", "8"))
 DAILY_RUN_MINUTE = int(os.getenv("DAILY_RUN_MINUTE", "0"))
 TOPICS_PER_RUN = int(os.getenv("TOPICS_PER_RUN", "5"))
 TOP_N = int(os.getenv("TOP_N", "5"))
+FRAME_TOP_N = int(os.getenv("FRAME_TOP_N", "5"))
+EVERGREEN_POOL_PATH = os.getenv(
+    "EVERGREEN_POOL_PATH",
+    str(BASE_DIR / "data" / "evergreen_topics.json"),
+)
+EVERGREEN_DAILY_COUNT = int(os.getenv("EVERGREEN_DAILY_COUNT", "2"))
 PIPELINE_STEP_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_STEP_TIMEOUT_SECONDS", "600"))
 PIPELINE_RUN_STALE_SECONDS = int(os.getenv("PIPELINE_RUN_STALE_SECONDS", "900"))
+SCHEDULER_ENABLED = _env_bool("SCHEDULER_ENABLED", False)
+SCHEDULER_CRON_HOUR = int(os.getenv("SCHEDULER_CRON_HOUR", "8"))
+SCHEDULER_CRON_MINUTE = int(os.getenv("SCHEDULER_CRON_MINUTE", "0"))
 EDITORIAL_PHASE = int(os.getenv("EDITORIAL_PHASE", "1"))
 EDITORIAL_RECENT_WINDOW_DAYS = int(os.getenv("EDITORIAL_RECENT_WINDOW_DAYS", "7"))
 EDITORIAL_PERFORMANCE_LOOKBACK_DAYS = int(os.getenv("EDITORIAL_PERFORMANCE_LOOKBACK_DAYS", "30"))
@@ -462,8 +527,8 @@ def require_env() -> None:
     if is_mock_mode():
         return
     missing = []
-    if not GEMINI_API_KEY and not QWEN_API_KEY:
-        missing.append("GEMINI_API_KEY or QWEN_API_KEY")
+    if not any([GEMINI_API_KEY, QWEN_API_KEY, DEEPSEEK_API_KEY, ANALYZE_API_KEY]):
+        missing.append("GEMINI_API_KEY or QWEN_API_KEY or DEEPSEEK_API_KEY or ANALYZE_API_KEY")
     if missing:
         raise RuntimeError(f"Missing required env vars: {', '.join(missing)}")
 

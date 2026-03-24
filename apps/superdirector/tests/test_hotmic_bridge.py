@@ -287,6 +287,91 @@ def test_topics_publish_confirm_preserves_xiaohongshu_platform(monkeypatch):
     assert result["topic"]["platform_priority"] == "xiaohongshu"
 
 
+def test_topics_publish_confirm_marks_evergreen_pool_published(monkeypatch):
+    row = SimpleNamespace(
+        id=10,
+        topic_id="topic-eg-1",
+        date="2026-03-23",
+        title="医保报销怎么看",
+        score_total=4.0,
+        editorial_priority_score=4.4,
+        platform_priority="shipinhao",
+        summary="摘要",
+        source="evergreen",
+        timestamp="",
+        raw_snippet="片段",
+        keywords='["医保"]',
+        url="hotmic://evergreen/eg_001",
+        topic_line_primary="public_issue",
+        topic_line_secondary=None,
+        line_confidence=0.8,
+        content_role="save",
+        creator_fit="strong",
+        li_jie_value="save",
+        zhang_auntie_value="watch",
+        audience_core="family_decision_maker",
+        compliance_risk="low",
+        actionability_risk="low",
+        topic_cluster="医保报销",
+        reject_type="none",
+        rejection_reason=None,
+        timeliness_window="evergreen",
+        platform_fit="shipinhao",
+        decision_impact_level="medium",
+        selection_rank_reason="常青补位",
+        status="ok",
+        errors_json="[]",
+        creator_ops=None,
+        publish_status=None,
+        publish_url=None,
+        publish_at=None,
+    )
+    marked = []
+
+    async def fake_get_topic_by_topic_id(_session, topic_id):
+        return row
+
+    async def fake_update_topic_feedback(_session, topic_id, payload):
+        for key, value in payload.items():
+            setattr(row, key, value)
+        return row
+
+    async def fake_upsert_bitable_feedback(_client, payloads):
+        return {"updated": len(payloads), "errors": []}
+
+    def fake_mark_evergreen_published(evergreen_id, *, published_at):
+        marked.append((evergreen_id, published_at))
+        return True
+
+    class DummySession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(api_routes.crud, "get_topic_by_topic_id", fake_get_topic_by_topic_id)
+    monkeypatch.setattr(api_routes.crud, "update_topic_feedback", fake_update_topic_feedback)
+    monkeypatch.setattr(api_routes, "_upsert_bitable_feedback", fake_upsert_bitable_feedback)
+    monkeypatch.setattr(api_routes, "mark_evergreen_published", fake_mark_evergreen_published)
+    monkeypatch.setattr(api_routes, "AsyncSessionLocal", lambda: DummySession())
+
+    asyncio.run(
+        api_routes.topics_publish_confirm(
+            "topic-eg-1",
+            DummyRequest(
+                {
+                    "platform": "wechat_video",
+                    "publish_url": "https://channels.weixin.qq.com/example",
+                    "publish_at": "2026-03-24T10:00:00+08:00",
+                }
+            ),
+        )
+    )
+
+    assert marked == [("eg_001", "2026-03-24T10:00:00+08:00")]
+
+
 def test_topics_today_create_script_uses_ranked_topic(monkeypatch):
     row = SimpleNamespace(
         id=2,

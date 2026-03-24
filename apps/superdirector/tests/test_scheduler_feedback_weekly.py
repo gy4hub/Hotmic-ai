@@ -26,3 +26,10 @@ def test_run_job_feedback_weekly_uses_ext_client(monkeypatch):
     assert result["status"] == "ok"
     assert result["result"]["eligible_topics"] == 6
 
+
+def test_start_scheduler_respects_disabled_switch(monkeypatch):
+    monkeypatch.setattr(scheduler, "SCHEDULER_ENABLED", False)
+
+    result = asyncio.run(scheduler.start_scheduler(SimpleNamespace()))
+
+    assert result is None

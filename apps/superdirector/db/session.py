@@ -20,6 +20,8 @@ _TOPIC_MIGRATIONS = {
     "publish_match_terms": "ALTER TABLE topics ADD COLUMN publish_match_terms TEXT",
     "topic_line_primary": "ALTER TABLE topics ADD COLUMN topic_line_primary TEXT",
     "topic_line_secondary": "ALTER TABLE topics ADD COLUMN topic_line_secondary TEXT",
+    "original_title": "ALTER TABLE topics ADD COLUMN original_title TEXT",
+    "localized_title": "ALTER TABLE topics ADD COLUMN localized_title TEXT",
     "line_confidence": "ALTER TABLE topics ADD COLUMN line_confidence FLOAT",
     "content_role": "ALTER TABLE topics ADD COLUMN content_role TEXT",
     "creator_fit": "ALTER TABLE topics ADD COLUMN creator_fit TEXT",
@@ -29,6 +31,7 @@ _TOPIC_MIGRATIONS = {
     "compliance_risk": "ALTER TABLE topics ADD COLUMN compliance_risk TEXT",
     "actionability_risk": "ALTER TABLE topics ADD COLUMN actionability_risk TEXT",
     "topic_cluster": "ALTER TABLE topics ADD COLUMN topic_cluster TEXT",
+    "cluster_mismatch": "ALTER TABLE topics ADD COLUMN cluster_mismatch INTEGER DEFAULT 0",
     "parent_topic_cluster": "ALTER TABLE topics ADD COLUMN parent_topic_cluster TEXT",
     "series_anchor_id": "ALTER TABLE topics ADD COLUMN series_anchor_id TEXT",
     "reject_type": "ALTER TABLE topics ADD COLUMN reject_type TEXT DEFAULT 'none'",
@@ -40,6 +43,7 @@ _TOPIC_MIGRATIONS = {
     "selection_rank_reason": "ALTER TABLE topics ADD COLUMN selection_rank_reason TEXT",
     "editorial_priority_score": "ALTER TABLE topics ADD COLUMN editorial_priority_score FLOAT",
     "frame_status": "ALTER TABLE topics ADD COLUMN frame_status TEXT",
+    "frame_tier": "ALTER TABLE topics ADD COLUMN frame_tier TEXT",
     "frame_rejection_reason": "ALTER TABLE topics ADD COLUMN frame_rejection_reason TEXT",
 }
 

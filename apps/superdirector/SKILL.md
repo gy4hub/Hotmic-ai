@@ -56,6 +56,11 @@ metadata:
 
 SuperDirector 是 HotMic AI 的选题源头模块。它负责多信源采集、AI 分析、七维评分、总编筛选和创作框架生成，并将高优先级题目直接桥接到 HotMic 创作链路。
 
+## 模式判定
+
+- Cowork 模式：检测到 `$COWORK_SESSION_DIR` 时，优先使用已启动的本地服务，把结果写入协作空间输出，并在需要人工确认的动作前保留交互。
+- OpenClaw / CLI 模式：未检测到 `$COWORK_SESSION_DIR` 时，统一通过 HTTP API 或命令参数调用，不依赖交互式确认。
+
 ## 运行模式
 
 ### 模式 A：作为独立 API 服务

@@ -33,6 +33,8 @@ def _topic_values(t: dict) -> dict:
         "topic_id": t.get("topic_id"),
         "date": t.get("date"),
         "title": t.get("title"),
+        "original_title": t.get("original_title"),
+        "localized_title": t.get("localized_title"),
         "angle_type": t.get("angle_type"),
         "platform_priority": t.get("platform_priority"),
         "content_type": t.get("content_type"),
@@ -56,6 +58,7 @@ def _topic_values(t: dict) -> dict:
         "compliance_risk": t.get("compliance_risk"),
         "actionability_risk": t.get("actionability_risk"),
         "topic_cluster": t.get("topic_cluster"),
+        "cluster_mismatch": 1 if t.get("cluster_mismatch") else 0,
         "parent_topic_cluster": t.get("parent_topic_cluster"),
         "series_anchor_id": t.get("series_anchor_id"),
         "reject_type": t.get("reject_type"),
@@ -99,6 +102,7 @@ def _topic_values(t: dict) -> dict:
         "errors_json": _json_dumps(t.get("errors")),
         "frame_json": _json_dumps(t.get("frame")),
         "frame_status": t.get("frame_status"),
+        "frame_tier": t.get("frame_tier"),
         "frame_rejection_reason": t.get("frame_rejection_reason"),
         "updated_at": _utc_now(),
     }
@@ -373,6 +377,27 @@ async def get_recent_editorial_topics(
     )
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_recent_cluster_analysis(
+    session: AsyncSession,
+    cluster: str,
+    *,
+    days: int = 7,
+) -> Topic | None:
+    cluster_name = str(cluster or "").strip()
+    if not cluster_name:
+        return None
+    cutoff = _utc_now() - timedelta(days=max(days, 1))
+    stmt = (
+        select(Topic)
+        .where(Topic.topic_cluster == cluster_name)
+        .where(Topic.updated_at >= cutoff)
+        .order_by(desc(Topic.updated_at))
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def update_topic_feedback(

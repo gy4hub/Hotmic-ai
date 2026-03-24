@@ -8,6 +8,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from compat import UTC
 
+from app_logging import get_logger
+from core.config import SCHEDULER_CRON_HOUR, SCHEDULER_CRON_MINUTE, SCHEDULER_ENABLED
 from db import crud
 from db.models import ScheduleJob
 from db.session import AsyncSessionLocal
@@ -19,14 +21,15 @@ from integrations.telegram_sender import send_casey_message
 _scheduler: AsyncIOScheduler | None = None
 _app_state = None
 _scheduler_tz = ZoneInfo("Asia/Shanghai")
+logger = get_logger(__name__)
 
 DEFAULT_SCHEDULE_JOBS = (
     {
         "job_id": "collector_morning",
-        "cron_hour": 8,
-        "cron_minute": 0,
+        "cron_hour": SCHEDULER_CRON_HOUR,
+        "cron_minute": SCHEDULER_CRON_MINUTE,
         "enabled": True,
-        "description": "早间数据采集",
+        "description": "每日自动选题 pipeline",
     },
     {
         "job_id": "collector_evening",
@@ -201,6 +204,7 @@ async def _execute_and_record(job_id: str) -> dict:
         status = "failed"
         error_message = str(exc)
         result = {"error": error_message}
+        logger.exception("Scheduled job %s failed: %s", job_id, exc)
 
     async with AsyncSessionLocal() as session:
         await crud.update_schedule_job_run(
@@ -239,6 +243,9 @@ async def refresh_schedule_job(job_id: str) -> ScheduleJob | None:
 
 async def start_scheduler(app_state):
     global _scheduler, _app_state
+    if not SCHEDULER_ENABLED:
+        logger.info("Scheduler disabled by configuration")
+        return None
     _app_state = app_state
     if _scheduler:
         return _scheduler

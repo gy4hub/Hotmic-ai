@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 from core.logging import configure_logging, get_logger
-from core.config import HTTP_PROXY, HTTPS_PROXY, EXT_TIMEOUT, INT_TIMEOUT, require_env
+from core.config import HTTP_PROXY, HTTPS_PROXY, EXT_TIMEOUT, INT_TIMEOUT, SCHEDULER_ENABLED, require_env
 from db.session import init_db
 from db.session import AsyncSessionLocal
 from db import crud
@@ -53,7 +53,19 @@ async def lifespan(app: FastAPI):
                 message="Bitable outbox flush failed on startup",
                 details={"error": str(exc)},
             )
-    await start_scheduler(app.state)
+    if SCHEDULER_ENABLED:
+        try:
+            await start_scheduler(app.state)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Scheduler startup failed: %s", exc)
+            async with AsyncSessionLocal() as session:
+                await crud.log_system(
+                    session,
+                    level="error",
+                    module="scheduler",
+                    message="Scheduler startup failed",
+                    details={"error": str(exc)},
+                )
 
     yield
 

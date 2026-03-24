@@ -16,7 +16,11 @@ class TopicPayload(TypedDict, total=False):
     id: int
     date: str
     title: str
+    original_title: str
+    localized_title: str
     source: str
+    source_type: str
+    evergreen_id: str
     timestamp: str
     raw_snippet: str
     summary: str
@@ -29,12 +33,14 @@ class TopicPayload(TypedDict, total=False):
     topic_line_primary: str
     content_role: str
     topic_cluster: str
+    cluster_mismatch: bool
     platform_priority: str
     publish_status: str
     publish_at: str
     publish_url: str
     perf_watch_rate: float
     frame_status: str
+    frame_tier: str
     frame_rejection_reason: str | None
     frame: FramePayload | dict[str, Any]
     pipeline_run_id: int

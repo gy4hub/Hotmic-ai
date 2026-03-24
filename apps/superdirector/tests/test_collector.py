@@ -92,6 +92,36 @@ def test_parse_fda_enforcement():
     assert "D-0001-2026" in items[0]["url"]
 
 
+@pytest.mark.parametrize(
+    ("source", "url"),
+    [
+        ("rss_36kr", "https://36kr.com/p/1"),
+        ("rss_huxiu", "https://www.huxiu.com/article/1.html"),
+        ("rss_ifanr", "https://www.ifanr.com/1"),
+        ("rss_geekpark", "https://www.geekpark.net/news/1"),
+        ("rss_dxy", "https://www.dxy.cn/bbs/newweb/pc/post/1"),
+    ],
+)
+def test_parse_rss_supports_new_discovery_sources(source, url):
+    rss_xml = f"""
+    <rss><channel>
+      <item>
+        <title>{source} 标题</title>
+        <link>{url}</link>
+        <description>{source} 摘要</description>
+        <pubDate>Tue, 24 Mar 2026 08:00:00 GMT</pubDate>
+      </item>
+    </channel></rss>
+    """
+
+    items = collector._parse_rss(rss_xml, source, limit=5)
+
+    assert len(items) == 1
+    assert items[0]["source"] == source
+    assert items[0]["title"] == f"{source} 标题"
+    assert items[0]["url"] == url
+
+
 def test_collect_topics_combines_rss_official_and_brave(monkeypatch):
     rss_xml = """
     <rss><channel>
@@ -164,7 +194,10 @@ def test_collect_topics_combines_rss_official_and_brave(monkeypatch):
     monkeypatch.setattr(collector, "BRAVE_QUERY_LIMIT", 5)
     monkeypatch.setattr(collector, "BRAVE_RESULT_COUNT", 1)
     monkeypatch.setattr(collector, "BAIDU_RESULT_COUNT", 1)
+    monkeypatch.setattr(collector, "SITE_SEARCH_TARGETS", [])
+    monkeypatch.setattr(collector, "EVERGREEN_DAILY_COUNT", 0)
     monkeypatch.setattr(collector, "_collect_mediacrawler", lambda: asyncio.sleep(0, result=([], [])))
+    monkeypatch.setattr(collector, "collect_competitor_topics", lambda *_args, **_kwargs: asyncio.sleep(0, result=([], [])))
 
     items, errors = asyncio.run(collector.collect_topics(SimpleNamespace(), SimpleNamespace()))
 
@@ -179,6 +212,78 @@ def test_collect_topics_combines_rss_official_and_brave(monkeypatch):
     assert any(item["source"] == "official" for item in items)
     assert any(item["source"] == "brave_search" for item in items)
     assert any(item["source"] == "baidu_search" for item in items)
+
+
+def test_collect_evergreen_respects_cooldown_and_limit(monkeypatch, tmp_path):
+    pool_path = tmp_path / "evergreen.json"
+    pool_path.write_text(
+        json.dumps(
+            {
+                "version": "1.0",
+                "topics": [
+                    {
+                        "id": "eg_1",
+                        "title": "医保报销怎么看",
+                        "persona_fit": "政策解读",
+                        "last_published": None,
+                        "cooldown_days": 90,
+                        "keywords": ["医保"],
+                        "angle_suggestions": ["先讲真实案例"],
+                    },
+                    {
+                        "id": "eg_2",
+                        "title": "老人药箱怎么整理",
+                        "persona_fit": "家庭管理",
+                        "last_published": "2026-03-10",
+                        "cooldown_days": 30,
+                        "keywords": ["药箱"],
+                        "angle_suggestions": ["讲常见误区"],
+                    },
+                    {
+                        "id": "eg_3",
+                        "title": "体检单怎么看",
+                        "persona_fit": "消费避坑",
+                        "last_published": "2025-10-01",
+                        "cooldown_days": 30,
+                        "keywords": ["体检"],
+                        "angle_suggestions": ["给出判断顺序"],
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(collector, "EVERGREEN_POOL_PATH", str(pool_path))
+    monkeypatch.setattr(collector, "EVERGREEN_DAILY_COUNT", 2)
+    monkeypatch.setattr(collector, "sample", lambda items, count: items[:count])
+
+    items, errors = asyncio.run(collector._collect_evergreen())
+
+    assert errors == []
+    assert [item["evergreen_id"] for item in items] == ["eg_1", "eg_3"]
+    assert all(item["source"] == "evergreen" for item in items)
+    assert all(item["source_type"] == "evergreen" for item in items)
+
+
+def test_mark_evergreen_published_updates_pool(tmp_path):
+    pool_path = tmp_path / "evergreen.json"
+    pool_path.write_text(
+        json.dumps(
+            {
+                "version": "1.0",
+                "topics": [{"id": "eg_1", "title": "医保报销怎么看", "last_published": None, "cooldown_days": 90}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    updated = collector.mark_evergreen_published("eg_1", published_at="2026-03-24T08:00:00Z", path=str(pool_path))
+    payload = json.loads(pool_path.read_text(encoding="utf-8"))
+
+    assert updated is True
+    assert payload["topics"][0]["last_published"] == "2026-03-24"
 
 
 def test_collect_brave_switches_to_second_key_on_402(monkeypatch):
@@ -213,6 +318,53 @@ def test_collect_brave_switches_to_second_key_on_402(monkeypatch):
     assert errors == []
     assert len(items) == 1
     assert calls == ["key-1", "key-2"]
+
+
+def test_build_site_search_query():
+    query = collector._build_site_search_query(
+        {"site": "mp.weixin.qq.com", "keyword": "赛柏蓝", "source": "wx_saibolan"}
+    )
+
+    assert query == "site:mp.weixin.qq.com 赛柏蓝"
+
+
+def test_collect_site_searches_builds_queries_and_overrides_sources(monkeypatch):
+    observed_queries: list[str] = []
+
+    async def fake_collect_brave(_client, keywords):
+        observed_queries.extend(keywords)
+        return (
+            [
+                {
+                    "title": f"{keywords[0]} 命中",
+                    "url": f"https://result.local/{len(observed_queries)}",
+                    "source": "brave_search",
+                    "timestamp": "",
+                    "raw_snippet": "snippet",
+                }
+            ],
+            [],
+        )
+
+    monkeypatch.setattr(collector, "_collect_brave", fake_collect_brave)
+    monkeypatch.setattr(collector, "BRAVE_SEARCH_API_KEYS", ("test-key",))
+    monkeypatch.setattr(
+        collector,
+        "SITE_SEARCH_TARGETS",
+        [
+            {"site": "mp.weixin.qq.com", "keyword": "赛柏蓝", "source": "wx_saibolan"},
+            {"site": "pedaily.cn", "keyword": "医疗 OR 医药 OR 器械", "source": "pedaily_med"},
+        ],
+    )
+
+    items, errors = asyncio.run(collector._collect_site_searches(SimpleNamespace(), SimpleNamespace()))
+
+    assert errors == []
+    assert observed_queries == [
+        "site:mp.weixin.qq.com 赛柏蓝",
+        "site:pedaily.cn 医疗 OR 医药 OR 器械",
+    ]
+    assert {item["source"] for item in items} == {"wx_saibolan", "pedaily_med"}
 
 
 def test_candidate_limit_prefers_raw_pool_limit(monkeypatch):

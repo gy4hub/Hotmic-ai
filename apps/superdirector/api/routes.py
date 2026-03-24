@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select, func, desc
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from html import escape
 import json
 import re
@@ -23,6 +23,7 @@ from pipeline.collector import (
     _parse_fda_enforcement,
     _parse_html_listing,
     _parse_rss,
+    mark_evergreen_published,
     TAVILY_ENDPOINT,
 )
 from pipeline.pipeline import run_pipeline
@@ -40,6 +41,7 @@ from pipeline.feedback_collector import (
     feedback_status_summary,
     save_douyin_cookie,
 )
+from pipeline.competitor_monitor import generate_competitor_report
 from pipeline.review_patch import apply_review_patch
 from pipeline.scoring_tuner import apply_scoring_patch, interpret_scoring_instruction
 from pipeline.scoring_config import (
@@ -60,6 +62,7 @@ from integrations.wewe_monitor import (
 )
 from integrations.telegram_sender import send_casey_message
 from core.config import (
+    ANALYZE_MODEL,
     today_str,
     TOP_N,
     BAIDU_API_KEY,
@@ -254,6 +257,8 @@ def _serialize_topic(row) -> dict:
         "topic_id": row.topic_id,
         "date": row.date,
         "title": row.title,
+        "original_title": getattr(row, "original_title", None),
+        "localized_title": getattr(row, "localized_title", None),
         "score_total": row.score_total,
         "quality_score": row.score_total,
         "editorial_priority_score": row.editorial_priority_score,
@@ -275,6 +280,7 @@ def _serialize_topic(row) -> dict:
         "compliance_risk": row.compliance_risk,
         "actionability_risk": row.actionability_risk,
         "topic_cluster": row.topic_cluster,
+        "cluster_mismatch": bool(getattr(row, "cluster_mismatch", 0)),
         "reject_type": row.reject_type,
         "rejection_reason": row.rejection_reason,
         "timeliness_window": row.timeliness_window,
@@ -285,6 +291,7 @@ def _serialize_topic(row) -> dict:
         "publish_url": getattr(row, "publish_url", None),
         "publish_at": getattr(row, "publish_at", None),
         "frame_status": getattr(row, "frame_status", None),
+        "frame_tier": getattr(row, "frame_tier", None),
         "frame_rejection_reason": getattr(row, "frame_rejection_reason", None),
         "status": row.status,
         "errors": _json_loads(row.errors_json),
@@ -566,6 +573,10 @@ async def _confirm_publish_for_topic(
                 "creator_ops": json.dumps(creator_ops, ensure_ascii=False),
             },
         )
+        if str(getattr(updated_row, "source", "") or "").strip() == "evergreen":
+            match = re.match(r"^hotmic://evergreen/(?P<entry_id>[^/?#]+)$", str(getattr(updated_row, "url", "") or "").strip())
+            if match:
+                mark_evergreen_published(match.group("entry_id"), published_at=publish_at)
 
     bitable_result = await _upsert_bitable_feedback(
         ext_client,
@@ -1520,6 +1531,36 @@ async def feedback_summary():
     }
 
 
+@router.get("/competitor/report")
+async def competitor_report(request: Request, days: int = 7):
+    lookback_days = max(days, 1)
+    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=lookback_days)
+    async with AsyncSessionLocal() as session:
+        rows = (
+            await session.execute(
+                select(Topic)
+                .where(Topic.source.like("competitor_%"))
+                .where(Topic.created_at >= cutoff)
+                .order_by(desc(Topic.created_at))
+                .limit(100)
+            )
+        ).scalars().all()
+
+    topics = [
+        {
+            "title": row.title,
+            "source": row.source,
+            "raw_snippet": row.raw_snippet,
+            "url": row.url,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
+    report = await generate_competitor_report(request.app.state.int_client, topics, days=lookback_days)
+    report["topics"] = topics
+    return report
+
+
 @router.get("/status")
 async def status(request: Request):
     async with AsyncSessionLocal() as session:
@@ -1587,8 +1628,12 @@ async def status(request: Request):
 
     if is_mock_mode():
         analyzer = "mock"
-    elif QWEN_API_KEY:
+    elif ANALYZE_MODEL.startswith("qwen-"):
         analyzer = "qwen"
+    elif ANALYZE_MODEL.startswith("deepseek-"):
+        analyzer = "deepseek"
+    elif ANALYZE_MODEL:
+        analyzer = "openai-compatible"
     else:
         analyzer = "gemini"
 
@@ -1608,7 +1653,7 @@ async def status(request: Request):
             "db": "ok",
         },
         "config": {
-            "model": QWEN_MODEL if QWEN_API_KEY else GEMINI_FLASH_MODEL,
+            "model": ANALYZE_MODEL or (QWEN_MODEL if QWEN_API_KEY else GEMINI_FLASH_MODEL),
             "top_n": TOP_N,
         },
         "active_run": {

@@ -23,6 +23,8 @@ from config import (
     BRAVE_QUERY_LIMIT,
     BRAVE_RESULT_COUNT,
     BRAVE_SEARCH_API_KEYS,
+    EVERGREEN_DAILY_COUNT,
+    EVERGREEN_POOL_PATH,
     HTML_SOURCE_ITEM_LIMIT,
     MEDIA_CRAWLER_DIR,
     MEDIA_CRAWLER_DOUYIN_KEYWORDS,
@@ -38,12 +40,14 @@ from config import (
     SEARCH_KEYWORDS,
     SEARCH_PICKS_PER_LAYER,
     RSS_WECHAT,
+    SITE_SEARCH_TARGETS,
     TAVILY_API_KEY,
     TAVILY_ENABLED,
     TAVILY_QUERY_LIMIT,
     TAVILY_RESULT_COUNT,
     TOPICS_PER_RUN,
 )
+from pipeline.competitor_monitor import collect_competitor_topics
 from pipeline.types import TopicPayload
 from pipeline.utils import request_with_retry
 
@@ -178,6 +182,96 @@ def _normalize_item(title: str, url: str, source: str, ts: str, snippet: str) ->
     }
     normalized["fingerprint"] = _fingerprint_item(normalized)
     return normalized
+
+
+def _load_evergreen_pool(path: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+    target_path = path or EVERGREEN_POOL_PATH
+    try:
+        with open(target_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {"version": "1.0", "topics": []}
+    if not isinstance(payload, dict):
+        return {"version": "1.0", "topics": []}
+    topics = payload.get("topics")
+    if not isinstance(topics, list):
+        payload["topics"] = []
+    return payload
+
+
+def _save_evergreen_pool(payload: dict[str, Any], path: str | os.PathLike[str] | None = None) -> None:
+    target = Path(path or EVERGREEN_POOL_PATH)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _parse_pool_date(value: Any) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except ValueError:
+        return None
+
+
+def _evergreen_available(entry: dict[str, Any], *, on_date: date) -> bool:
+    last_published = _parse_pool_date(entry.get("last_published"))
+    cooldown_days = max(int(entry.get("cooldown_days") or 0), 0)
+    if last_published is None:
+        return True
+    return (on_date - last_published).days >= cooldown_days
+
+
+def _evergreen_url(entry_id: str) -> str:
+    return f"hotmic://evergreen/{entry_id}"
+
+
+def _evergreen_item(entry: dict[str, Any]) -> TopicPayload:
+    entry_id = str(entry.get("id") or "").strip()
+    angle_suggestions = entry.get("angle_suggestions") or []
+    snippet = " | ".join(
+        part
+        for part in [
+            str(entry.get("persona_fit") or "").strip(),
+            "；".join(str(item).strip() for item in angle_suggestions if str(item).strip()),
+        ]
+        if part
+    )
+    return {
+        **_normalize_item(
+            str(entry.get("title") or "").strip(),
+            _evergreen_url(entry_id),
+            "evergreen",
+            "",
+            snippet,
+        ),
+        "source_type": "evergreen",
+        "evergreen_id": entry_id,
+        "keywords": [str(item).strip() for item in (entry.get("keywords") or []) if str(item).strip()],
+    }
+
+
+def mark_evergreen_published(
+    evergreen_id: str,
+    *,
+    published_at: str,
+    path: str | os.PathLike[str] | None = None,
+) -> bool:
+    target_id = str(evergreen_id or "").strip()
+    if not target_id:
+        return False
+    payload = _load_evergreen_pool(path)
+    updated = False
+    publish_date = _parse_pool_date(published_at) or date.today()
+    for entry in payload.get("topics", []):
+        if str(entry.get("id") or "").strip() != target_id:
+            continue
+        entry["last_published"] = publish_date.isoformat()
+        updated = True
+        break
+    if updated:
+        _save_evergreen_pool(payload, path)
+    return updated
 
 
 def _normalize_title_for_match(title: str) -> str:
@@ -348,6 +442,12 @@ def _extract_baidu_references(payload: dict[str, Any]) -> list[dict[str, str]]:
     return items
 
 
+def _build_site_search_query(target: dict[str, str]) -> str:
+    site = str(target.get("site") or "").strip()
+    keyword = str(target.get("keyword") or "").strip()
+    return " ".join(part for part in [f"site:{site}" if site else "", keyword] if part).strip()
+
+
 async def collect_baidu(keywords: list[str], client) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     if not BAIDU_API_KEY or not keywords:
@@ -444,6 +544,32 @@ async def _collect_rss(int_client) -> tuple[list[dict[str, str]], list[str]]:
     return items, errors
 
 
+async def _collect_evergreen() -> tuple[list[TopicPayload], list[str]]:
+    count = max(EVERGREEN_DAILY_COUNT, 0)
+    if count == 0:
+        return [], []
+
+    payload = _load_evergreen_pool()
+    available = [
+        entry
+        for entry in payload.get("topics", [])
+        if isinstance(entry, dict) and _evergreen_available(entry, on_date=date.today())
+    ]
+    if not available:
+        return [], []
+
+    ranked_available = sorted(
+        available,
+        key=lambda entry: (
+            _parse_pool_date(entry.get("last_published")) or date(1970, 1, 1),
+            str(entry.get("id") or ""),
+        ),
+    )
+    pick_count = min(count, len(ranked_available))
+    selected = sample(ranked_available, pick_count) if pick_count else []
+    return [_evergreen_item(entry) for entry in selected], []
+
+
 async def _collect_brave(ext_client, keywords: list[str]) -> tuple[list[dict[str, str]], list[str]]:
     items: list[dict[str, str]] = []
     errors: list[str] = []
@@ -520,6 +646,34 @@ async def _collect_baidu(int_client, keywords: list[str]) -> tuple[list[dict[str
         return items, []
     except Exception as exc:  # noqa: BLE001
         return [], [f"Baidu fetch failed: {exc}"]
+
+
+async def _collect_site_searches(ext_client, int_client) -> tuple[list[dict[str, str]], list[str]]:
+    items: list[dict[str, str]] = []
+    errors: list[str] = []
+
+    for target in SITE_SEARCH_TARGETS:
+        query = _build_site_search_query(target)
+        source = str(target.get("source") or "site_search").strip() or "site_search"
+        if not query:
+            continue
+
+        if BRAVE_SEARCH_API_KEYS:
+            brave_items, brave_errors = await _collect_brave(ext_client, [query])
+            items.extend([{**item, "source": source} for item in brave_items])
+            if not brave_errors:
+                continue
+            errors.extend([f"Site search brave failed {query}: {err}" for err in brave_errors])
+
+        if BAIDU_API_KEY:
+            baidu_items, baidu_errors = await _collect_baidu(int_client, [query])
+            items.extend([{**item, "source": source} for item in baidu_items])
+            if baidu_errors:
+                errors.extend([f"Site search baidu failed {query}: {err}" for err in baidu_errors])
+        elif not BRAVE_SEARCH_API_KEYS:
+            errors.append(f"Site search skipped {query}: no Brave or Baidu credentials configured")
+
+    return items, errors
 
 
 async def _collect_tavily(ext_client, keywords: list[str]) -> tuple[list[dict[str, str]], list[str]]:
@@ -746,24 +900,55 @@ async def collect_fresh_topics(int_client, ext_client) -> tuple[list[TopicPayloa
         (brave_items, brave_errors),
         (baidu_items, baidu_errors),
         (tavily_items, tavily_errors),
+        (site_items, site_errors),
         (official_html_items, official_html_errors),
         (official_api_items, official_api_errors),
         (mediacrawler_items, mediacrawler_errors),
+        (evergreen_items, evergreen_errors),
+        (competitor_items, competitor_errors),
     ) = await asyncio.gather(
         _collect_rss(int_client),
         _collect_brave(ext_client, brave_keywords),
         _collect_baidu(int_client, baidu_keywords),
         _collect_tavily(ext_client, tavily_keywords),
+        _collect_site_searches(ext_client, int_client),
         _collect_official_pages(ext_client),
         _collect_official_apis(ext_client),
         _collect_mediacrawler(),
+        _collect_evergreen(),
+        collect_competitor_topics(
+            ext_client,
+            int_client,
+            brave_search=_collect_brave,
+            baidu_search=_collect_baidu,
+        ),
     )
 
     official_items = official_html_items + official_api_items
     official_errors = official_html_errors + official_api_errors
-    items = rss_items + official_items + mediacrawler_items + brave_items + baidu_items + tavily_items
+    items = (
+        rss_items
+        + official_items
+        + evergreen_items
+        + competitor_items
+        + mediacrawler_items
+        + brave_items
+        + baidu_items
+        + tavily_items
+        + site_items
+    )
     unique = _deduplicate_items(items)
-    errors = rss_errors + official_errors + mediacrawler_errors + brave_errors + baidu_errors + tavily_errors
+    errors = (
+        rss_errors
+        + official_errors
+        + evergreen_errors
+        + competitor_errors
+        + mediacrawler_errors
+        + brave_errors
+        + baidu_errors
+        + tavily_errors
+        + site_errors
+    )
     return unique[: _candidate_limit()], errors
 
 

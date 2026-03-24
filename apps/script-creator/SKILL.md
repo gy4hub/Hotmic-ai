@@ -38,6 +38,11 @@ metadata:
 从选题到完整9件套交付的口播脚本创作引擎。内置采访流程、合规自检、双平台适配。
 这是整个 HotMic AI（开麦）套件的**核心差异化模块**——方法论是护城河。
 
+## 运行模式
+
+- Cowork 模式：检测到 `$COWORK_SESSION_DIR` 时，草稿、脚本和发布包优先写到 `mnt/outputs/`，需要创作者确认的节点走交互式确认。
+- OpenClaw / CLI 模式：未检测到 `$COWORK_SESSION_DIR` 时，所有输入都通过参数传入，结果输出到 `stdout` 或 `--output` 指定目录。
+
 ## 快速开始
 
 ```bash

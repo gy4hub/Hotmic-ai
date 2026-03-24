@@ -38,6 +38,11 @@ metadata:
 
 将定稿脚本归档到飞书云文档，同时生成两份"复制粘贴即用"的平台发布包。
 
+## 运行模式
+
+- Cowork 模式：检测到 `$COWORK_SESSION_DIR` 时，优先把产物写到 `mnt/outputs/`，并在关键发布动作前走交互确认。
+- OpenClaw / CLI 模式：未检测到 `$COWORK_SESSION_DIR` 时，全部走参数化命令，结果输出到 `stdout` 或 `--output` 指定路径。
+
 ## 快速开始
 
 ```bash

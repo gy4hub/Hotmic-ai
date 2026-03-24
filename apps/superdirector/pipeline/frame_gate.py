@@ -67,6 +67,8 @@ def frame_quality_gate(topic: dict | Any) -> tuple[bool, str]:
     outline = frame.get("outline") or []
     cta = str(frame.get("cta") or "").strip()
     platform = _get_value(topic, "platform_priority")
+    frame_tier = str(_get_value(topic, "frame_tier") or "full").strip().lower()
+    is_lite = frame_tier == "lite"
 
     if not hook:
         return False, "hook 为空"
@@ -76,13 +78,16 @@ def frame_quality_gate(topic: dict | Any) -> tuple[bool, str]:
 
     if not isinstance(outline, list):
         return False, "outline 必须是数组"
-    if not 4 <= len(outline) <= 7:
-        return False, f"outline 条数不合规：{len(outline)} 条，要求 4-7 条"
+    min_outline_count = 3 if is_lite else 4
+    max_outline_count = 5 if is_lite else 7
+    if not min_outline_count <= len(outline) <= max_outline_count:
+        return False, f"outline 条数不合规：{len(outline)} 条，要求 {min_outline_count}-{max_outline_count} 条"
     for index, item in enumerate(outline, start=1):
-        if _compact_len(item) < 8:
-            return False, f"outline 第 {index} 条过短，至少 8 字"
+        minimum_outline_len = 6 if is_lite else 8
+        if _compact_len(item) < minimum_outline_len:
+            return False, f"outline 第 {index} 条过短，至少 {minimum_outline_len} 字"
 
-    if not cta:
+    if not cta and not is_lite:
         return False, "cta 为空"
 
     for code, patterns in _HOOK_REDLINE_PATTERNS.items():

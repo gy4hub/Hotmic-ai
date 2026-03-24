@@ -25,6 +25,27 @@ def test_frame_quality_gate_passes_valid_douyin_frame():
     assert reason == "通过"
 
 
+def test_frame_quality_gate_passes_valid_lite_frame_without_cta():
+    passed, reason = frame_quality_gate(
+        {
+            "platform_priority": "douyin",
+            "frame_tier": "lite",
+            "frame": {
+                "hook": "医保进了，为啥还难开？",
+                "outline": [
+                    "先讲患者最常见误解",
+                    "再拆医院端卡点",
+                    "最后给家属判断法",
+                ],
+                "cta": "",
+            },
+        }
+    )
+
+    assert passed is True
+    assert reason == "通过"
+
+
 def test_frame_quality_gate_rejects_long_hook():
     passed, reason = frame_quality_gate(
         {

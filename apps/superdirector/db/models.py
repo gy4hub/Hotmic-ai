@@ -42,6 +42,8 @@ class Topic(Base):
     topic_id = Column(String(64), unique=True, index=True)
     date = Column(String(16))
     title = Column(Text)
+    original_title = Column(Text)
+    localized_title = Column(Text)
     angle_type = Column(String(32))
     platform_priority = Column(String(32))
     content_type = Column(String(32))
@@ -69,6 +71,7 @@ class Topic(Base):
     compliance_risk = Column(String(16))
     actionability_risk = Column(String(16))
     topic_cluster = Column(String(64))
+    cluster_mismatch = Column(Integer, default=0)
     parent_topic_cluster = Column(String(64))
     series_anchor_id = Column(String(64))
     reject_type = Column(String(32), default="none")
@@ -127,6 +130,7 @@ class Topic(Base):
     errors_json = Column(Text)
     frame_json = Column(Text)
     frame_status = Column(String(32))
+    frame_tier = Column(String(16))
     frame_rejection_reason = Column(Text)
 
 

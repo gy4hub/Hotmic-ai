@@ -1,6 +1,7 @@
 import json
 import asyncio
 from pathlib import Path
+from typing import Callable, Awaitable
 from config import (
     GEMINI_API_KEY,
     GEMINI_FLASH_MODEL,
@@ -9,6 +10,7 @@ from config import (
     QWEN_MODEL,
     is_mock_mode,
 )
+from pipeline.frame_gate import frame_quality_gate
 from pipeline.utils import request_with_retry
 from pipeline.types import TopicPayload, UsageSummary
 
@@ -20,7 +22,11 @@ def _prompt_from_file(path: str) -> str:
         return f.read()
 
 
-def _prompt_path(platform: str) -> str:
+def _prompt_path(platform: str, *, lite: bool = False) -> str:
+    if lite:
+        return str(
+            Path(__file__).resolve().parent.parent / "config" / "prompts" / "generate_frame_lite.txt"
+        )
     return str(
         Path(__file__).resolve().parent.parent / "config" / "prompts" / f"generate_frame_{platform}.txt"
     )
@@ -48,9 +54,14 @@ def _usage_summary(provider: str, model: str, endpoint: str, usage: dict) -> Usa
     }
 
 
-async def _frame_with_qwen(int_client, topic: TopicPayload) -> tuple[TopicPayload, UsageSummary]:
+async def _frame_with_qwen(
+    int_client,
+    topic: TopicPayload,
+    *,
+    lite: bool = False,
+) -> tuple[TopicPayload, UsageSummary]:
     platform = topic.get("platform_priority") or "douyin"
-    prompt = _prompt_from_file(_prompt_path(platform))
+    prompt = _prompt_from_file(_prompt_path(platform, lite=lite))
 
     payload = {
         "model": QWEN_MODEL,
@@ -79,14 +90,19 @@ async def _frame_with_qwen(int_client, topic: TopicPayload) -> tuple[TopicPayloa
     )
     frame = json.loads(content)
     return (
-        {**topic, "frame": frame},
+        {**topic, "frame": frame, "frame_tier": "lite" if lite else "full"},
         _usage_summary("qwen", QWEN_MODEL, "chat.completions", data.get("usage", {})),
     )
 
 
-async def _frame_with_gemini(ext_client, topic: TopicPayload) -> tuple[TopicPayload, UsageSummary]:
+async def _frame_with_gemini(
+    ext_client,
+    topic: TopicPayload,
+    *,
+    lite: bool = False,
+) -> tuple[TopicPayload, UsageSummary]:
     platform = topic.get("platform_priority") or "douyin"
-    prompt = _prompt_from_file(_prompt_path(platform))
+    prompt = _prompt_from_file(_prompt_path(platform, lite=lite))
 
     payload = {
         "contents": [
@@ -117,7 +133,7 @@ async def _frame_with_gemini(ext_client, topic: TopicPayload) -> tuple[TopicPayl
     )
     frame = json.loads(text)
     return (
-        {**topic, "frame": frame},
+        {**topic, "frame": frame, "frame_tier": "lite" if lite else "full"},
         _usage_summary(
             "google",
             GEMINI_FLASH_MODEL,
@@ -125,6 +141,71 @@ async def _frame_with_gemini(ext_client, topic: TopicPayload) -> tuple[TopicPayl
             data.get("usageMetadata", {}),
         ),
     )
+
+
+def _merge_usage(base: UsageSummary, extra: UsageSummary) -> UsageSummary:
+    if not extra:
+        return base
+    if not base:
+        return dict(extra)
+    merged = dict(base)
+    merged["provider"] = extra.get("provider") or merged.get("provider")
+    merged["model"] = extra.get("model") or merged.get("model")
+    merged["endpoint"] = extra.get("endpoint") or merged.get("endpoint")
+    merged["input_tokens"] = (merged.get("input_tokens") or 0) + (extra.get("input_tokens") or 0)
+    merged["output_tokens"] = (merged.get("output_tokens") or 0) + (extra.get("output_tokens") or 0)
+    return merged
+
+
+async def _frame_topic(ext_client, int_client, topic: TopicPayload) -> tuple[TopicPayload, UsageSummary]:
+    frame_func: Callable[..., Awaitable[tuple[TopicPayload, UsageSummary]]]
+    client = int_client if QWEN_API_KEY else ext_client
+    frame_func = _frame_with_qwen if QWEN_API_KEY else _frame_with_gemini
+
+    aggregated_usage: UsageSummary = {}
+    full_error = ""
+    try:
+        full_result, full_usage = await frame_func(client, topic, lite=False)
+        aggregated_usage = _merge_usage(aggregated_usage, full_usage)
+        passed, _reason = frame_quality_gate(full_result)
+        if passed:
+            return full_result, aggregated_usage
+    except Exception as exc:  # noqa: BLE001
+        full_error = str(exc)
+
+    try:
+        lite_result, lite_usage = await frame_func(client, topic, lite=True)
+        aggregated_usage = _merge_usage(aggregated_usage, lite_usage)
+        passed, reason = frame_quality_gate(lite_result)
+        if passed:
+            return (
+                {
+                    **lite_result,
+                    "frame_status": "passed",
+                    "frame_rejection_reason": None,
+                },
+                aggregated_usage,
+            )
+        return (
+            {
+                **lite_result,
+                "frame_status": "rejected",
+                "frame_rejection_reason": reason,
+            },
+            aggregated_usage,
+        )
+    except Exception as exc:  # noqa: BLE001
+        reason = full_error or str(exc)
+        return (
+            {
+                **topic,
+                "frame_status": "rejected",
+                "frame_rejection_reason": "generation_failed",
+                "status": "failed",
+                "errors": (topic.get("errors") or []) + [f"Frame generation failed: {reason}"],
+            },
+            aggregated_usage,
+        )
 
 
 async def generate_frames(
@@ -141,6 +222,7 @@ async def generate_frames(
             framed.append(
                 {
                     **t,
+                    "frame_tier": "full",
                     "frame": {
                         "hook": "MOCK: 先给一个反直觉钩子",
                         "outline": ["问题现象", "商业逻辑", "影响人群", "结论+免责声明"],
@@ -158,25 +240,22 @@ async def generate_frames(
         if idx > 0:
             await asyncio.sleep(2)
         try:
-            if QWEN_API_KEY:
-                frame_result, frame_usage = await _frame_with_qwen(int_client, t)
-            else:
-                frame_result, frame_usage = await _frame_with_gemini(ext_client, t)
+            frame_result, frame_usage = await _frame_topic(ext_client, int_client, t)
             framed.append(frame_result)
-            if frame_usage:
-                usage["provider"] = frame_usage.get("provider")
-                usage["model"] = frame_usage.get("model")
-                usage["endpoint"] = frame_usage.get("endpoint")
-                usage["input_tokens"] = usage.get("input_tokens", 0) + (
-                    frame_usage.get("input_tokens") or 0
-                )
-                usage["output_tokens"] = usage.get("output_tokens", 0) + (
-                    frame_usage.get("output_tokens") or 0
-                )
+            usage = _merge_usage(usage, frame_usage)
+            if frame_result.get("frame_status") == "rejected":
+                err = f"Frame generation failed for {t.get('title')}: {frame_result.get('frame_rejection_reason')}"
+                errors.append(err)
         except Exception as exc:  # noqa: BLE001
             err = f"Frame generation failed for {t.get('title')}: {exc}"
             errors.append(err)
-            t = {**t, "status": "failed", "errors": (t.get("errors") or []) + [err]}
+            t = {
+                **t,
+                "frame_status": "rejected",
+                "frame_rejection_reason": "generation_failed",
+                "status": "failed",
+                "errors": (t.get("errors") or []) + [err],
+            }
             framed.append(t)
 
     return framed, errors, usage
