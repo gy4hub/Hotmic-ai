@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from compat import UTC
 from config import (
     FEEDBACK_WEEKLY_DIR,
     FEEDBACK_WEEKLY_LOOKBACK_DAYS,

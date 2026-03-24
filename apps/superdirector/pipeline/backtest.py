@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from statistics import mean
 from typing import Any
 import re
@@ -9,6 +9,7 @@ import re
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from compat import UTC
 from db.models import PipelineRun, Topic
 from pipeline.editorial import normalize_editorial_item, select_topics_for_output
 

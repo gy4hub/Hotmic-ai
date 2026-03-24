@@ -2,11 +2,12 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select, func, desc
 import asyncio
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from html import escape
 import json
 import re
 from pathlib import Path
+from compat import UTC
 from db.session import AsyncSessionLocal
 from db.models import PipelineRun, Topic, ApiCostLog
 from pipeline.collector import (

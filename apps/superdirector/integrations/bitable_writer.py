@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
+from compat import UTC
 from core.config import BITABLE_APP_TOKEN, FEISHU_BASE_URL, FRAMES_TABLE_ID, TOPICS_TABLE_ID
 from db.session import AsyncSessionLocal
 from db import crud

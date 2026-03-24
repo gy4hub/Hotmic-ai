@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC
 from types import SimpleNamespace
 
+from compat import UTC
 from tools import api_routes
 
 

@@ -36,7 +36,7 @@
 
 ### 前置条件
 
-- Python 3.8+
+- Python 3.11+
 - FFmpeg（仅 video-cutter 需要）
 - Groq API Key（免费注册：https://console.groq.com）
 
@@ -53,7 +53,7 @@ python shared/validate_shared.py
 export GROQ_API_KEY=your_groq_api_key_here
 
 # 4. 安装 video-cutter 依赖
-bash hotmic-video-cutter/scripts/install_deps.sh
+bash apps/video-cutter/scripts/install_deps.sh
 
 # 5. 如需启动选题系统
 cd apps/superdirector

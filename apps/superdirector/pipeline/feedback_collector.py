@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from datetime import UTC, datetime
+from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from compat import UTC
 from config import BITABLE_APP_TOKEN, DOUYIN_COOKIE_PATH as CONFIG_DOUYIN_COOKIE_PATH, FEISHU_BASE_URL, TOPICS_TABLE_ID
 from db import crud
 from db.session import AsyncSessionLocal

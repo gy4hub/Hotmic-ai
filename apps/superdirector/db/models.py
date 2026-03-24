@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import datetime
+from compat import UTC
 from sqlalchemy import (
     Column,
     Integer,

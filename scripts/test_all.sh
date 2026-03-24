@@ -12,6 +12,9 @@ echo "[test_all] python: $PYTHON_BIN"
 echo "[test_all] validate shared"
 "$PYTHON_BIN" "$ROOT_DIR/shared/validate_shared.py" --dir "$ROOT_DIR/shared"
 
+echo "[test_all] validate plugin"
+"$PYTHON_BIN" "$ROOT_DIR/scripts/validate_plugin.py"
+
 echo "[test_all] superdirector"
 "$PYTHON_BIN" -m pytest "$ROOT_DIR/apps/superdirector/tests" -q
 

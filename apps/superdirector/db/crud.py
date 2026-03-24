@@ -1,8 +1,9 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Iterable
 from sqlalchemy import select, update, delete, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from compat import UTC
 from db.models import (
     PipelineRun,
     Topic,

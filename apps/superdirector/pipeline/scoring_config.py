@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
 from typing import Any
 
+from compat import UTC
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WEIGHTS_DIR = REPO_ROOT / 'config'
 PLATFORMS = ['douyin', 'xiaohongshu', 'shipinhao']

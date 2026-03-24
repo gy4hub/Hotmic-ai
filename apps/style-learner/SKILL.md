@@ -8,6 +8,13 @@ description: >
   是 HotMic AI（开麦） 套件的进化引擎，让系统越用越懂创作者。
 metadata:
   openclaw:
+    commands:
+      - name: /hotmic-learn
+        description: 分析改稿差异并提取写作偏好规则
+        usage: /hotmic-learn <原稿路径> <改稿路径>
+      - name: /hotmic-calibrate
+        description: 手动校准风格规则库
+        usage: /hotmic-calibrate
     dependencies:
       - python3
     tags:
@@ -15,6 +22,14 @@ metadata:
       - writing-style
       - personalization
       - content-creation
+  cowork:
+    slot: on_file_change
+    requires_files: true
+    output_format: json
+    examples:
+      - 我改了一些，你帮我学一下这些偏好
+      - 校准一下我最近的写作风格
+      - 看看这次改稿学到了什么规则
 ---
 
 # hotmic-style-learner — 创作风格自进化学习模块

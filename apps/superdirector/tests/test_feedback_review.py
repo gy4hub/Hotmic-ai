@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+from compat import UTC
 from pipeline import feedback_review
 
 
@@ -139,4 +140,3 @@ def test_run_feedback_weekly_cycle_generates_patch_and_notifies(monkeypatch, tmp
     assert result["notified"] is True
     assert "patch 已生成，暂未自动应用" in notified[0]
     assert "医疗公共议题: +0.05 连续3条播放量>10万" in notified[0]
-

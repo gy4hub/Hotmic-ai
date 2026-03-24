@@ -7,11 +7,28 @@ description: >
   或给出选题信息、标题、话题方向时立即使用。是 HotMic AI（开麦） 套件的核心模块，优先级最高。
 metadata:
   openclaw:
+    commands:
+      - name: /hotmic-write
+        description: 从选题生成口播脚本 9 件套
+        usage: /hotmic-write <选题标题或话题方向>
+      - name: /hotmic-publish-pack
+        description: 从脚本生成各平台发布包
+        usage: /hotmic-publish-pack <脚本文件路径>
+    dependencies:
+      - python3
     tags:
       - writing
       - content-creation
       - video-script
       - chinese
+  cowork:
+    slot: on_demand
+    requires_files: true
+    output_format: markdown
+    examples:
+      - 帮我把这个选题写成脚本
+      - 出一篇关于医保集采的视频稿
+      - 这个选题帮我写成视频号和抖音双平台版本
 ---
 
 # hotmic-script-creator — 口播脚本创作引擎

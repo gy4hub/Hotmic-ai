@@ -7,12 +7,27 @@ description: >
   是 HotMic AI（开麦） 套件的一部分。
 metadata:
   openclaw:
+    commands:
+      - name: /hotmic-review
+        description: 导入平台数据并生成复盘报告
+        usage: /hotmic-review <数据文件路径> [--period week|month]
+      - name: /hotmic-patches
+        description: 生成选题权重调整补丁
+        usage: /hotmic-patches <数据文件路径>
     dependencies:
       - python3
     tags:
       - analytics
       - content-creation
       - reporting
+  cowork:
+    slot: on_demand
+    requires_files: true
+    output_format: markdown
+    examples:
+      - 复盘一下最近的视频数据
+      - 用这份导出的后台数据出一版周报
+      - 看看最近哪些题材更值得继续做
 ---
 
 # hotmic-review-engine — 自媒体数据复盘引擎

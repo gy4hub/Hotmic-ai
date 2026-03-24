@@ -1,0 +1,62 @@
+{
+  "name": "hotmic-ai",
+  "version": "1.0.0",
+  "display_name": "HotMic AI（开麦）",
+  "description": "自媒体内容全链路 AI 套件：选题发现 -> 口播脚本创作 -> 视频粗剪 -> 发布包生成 -> 数据复盘 -> 风格学习。专为中文短视频创作者设计。",
+  "author": "Chen（杨晨）",
+  "license": "MIT",
+  "repository": "https://github.com/gy4hub/Hotmic-ai",
+  "python_requires": ">=3.11",
+  "skills": [
+    {
+      "id": "hotmic-script-creator",
+      "path": "apps/script-creator",
+      "name": "口播脚本创作",
+      "triggers": ["写稿", "出脚本", "创作", "帮我策划", "写口播", "写个视频脚本", "出一篇"]
+    },
+    {
+      "id": "hotmic-video-cutter",
+      "path": "apps/video-cutter",
+      "name": "视频粗剪",
+      "triggers": ["剪视频", "粗剪", "去重复", "帮我剪口播"],
+      "requires": ["ffmpeg"],
+      "env": ["GROQ_API_KEY"]
+    },
+    {
+      "id": "hotmic-publish-kit",
+      "path": "apps/publish-kit",
+      "name": "发布包生成",
+      "triggers": ["发到飞书", "生成发布包", "归档", "上传飞书"],
+      "env": ["FEISHU_APP_SECRET"]
+    },
+    {
+      "id": "hotmic-review-engine",
+      "path": "apps/review-engine",
+      "name": "数据复盘",
+      "triggers": ["复盘", "看看数据", "分析最近的内容"]
+    },
+    {
+      "id": "hotmic-style-learner",
+      "path": "apps/style-learner",
+      "name": "风格学习",
+      "triggers": ["校准风格", "看看学到了什么", "调整偏好", "回顾规则"]
+    },
+    {
+      "id": "superdirector",
+      "path": "apps/superdirector",
+      "name": "选题引擎",
+      "type": "service",
+      "triggers": ["选题", "今日热点", "看看有什么好选题", "帮我找选题"],
+      "service_command": "cd apps/superdirector && python -m uvicorn main:app --host 127.0.0.1 --port 8100"
+    }
+  ],
+  "shared_config": "shared/",
+  "tags": [
+    "content-creation",
+    "chinese",
+    "video",
+    "healthcare",
+    "analytics",
+    "writing"
+  ]
+}

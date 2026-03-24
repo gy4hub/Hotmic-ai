@@ -1,3 +1,4 @@
+# Requires Python >= 3.11
 fastapi
 uvicorn
 httpx
@@ -18,3 +19,4 @@ openpyxl
 pyperclip
 rich
 socksio
+PyYAML

@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any
 
 import config as app_config
-from config import CASEY_PROFILE_PATH, HOTMIC_ROOT_PATH, HOTMIC_STYLE_DB_PATH, load_casey_profile
+from config import (
+    CASEY_PROFILE_PATH,
+    HOTMIC_ROOT_PATH,
+    HOTMIC_STYLE_CONFIDENCE_THRESHOLD,
+    HOTMIC_STYLE_DB_PATH,
+    load_casey_profile,
+)
 
 
 def _load_json(path: str | Path) -> dict[str, Any]:
@@ -196,6 +202,7 @@ def apply_style_patch(
 
     created = 0
     updated = 0
+    skipped = 0
     applied_rules: list[dict[str, Any]] = []
 
     for patch in style_patch or []:
@@ -212,6 +219,9 @@ def apply_style_patch(
             "rule": rule_text,
         }
         confidence = round(float(patch.get("confidence") or 0.3), 2)
+        if confidence < HOTMIC_STYLE_CONFIDENCE_THRESHOLD:
+            skipped += 1
+            continue
         matching = module.find_matching_rule(candidate, rules)
         if matching:
             matching["confidence"] = round(max(float(matching.get("confidence") or 0.0), confidence), 2)
@@ -243,6 +253,7 @@ def apply_style_patch(
         "style_db_path": str(target_path),
         "created": created,
         "updated": updated,
+        "skipped": skipped,
         "applied_rules": applied_rules,
     }
 

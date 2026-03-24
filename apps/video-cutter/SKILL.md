@@ -7,6 +7,10 @@ description: >
   是 HotMic AI（开麦） 套件的一部分。
 metadata:
   openclaw:
+    commands:
+      - name: /hotmic-cut
+        description: 口播视频粗剪（去重复 + 去静音）
+        usage: /hotmic-cut <视频文件路径> [--script <脚本路径>]
     dependencies:
       - ffmpeg
       - python3
@@ -18,6 +22,14 @@ metadata:
       - editing
       - speech
       - content-creation
+  cowork:
+    slot: on_demand
+    requires_files: true
+    output_format: video/mp4
+    examples:
+      - 帮我剪这个口播视频
+      - 粗剪一下，去掉重复段
+      - 这个视频按脚本对齐后做一版粗剪
 ---
 
 # hotmic-video-cutter — AI口播视频粗剪工具
@@ -29,7 +41,7 @@ metadata:
 ## 前置条件
 
 - FFmpeg（已安装在系统中）
-- Python 3.8+
+- Python 3.11+
 - Groq API Key（设置环境变量 `GROQ_API_KEY`）
 - 运行 `scripts/install_deps.sh` 安装Python依赖
 

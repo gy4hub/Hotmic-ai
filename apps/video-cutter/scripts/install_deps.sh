@@ -7,7 +7,7 @@ echo "=== HotMic video-cutter 依赖安装 ==="
 
 # 检查 Python3
 if ! command -v python3 &>/dev/null; then
-  echo "[ERROR] Python3 未安装，请先安装 Python 3.8+"
+  echo "[ERROR] Python3 未安装，请先安装 Python 3.11+"
   exit 1
 fi
 

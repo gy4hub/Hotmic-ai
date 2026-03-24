@@ -6,7 +6,7 @@ import json
 import os
 import re
 from difflib import SequenceMatcher
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from datetime import date
 from html import unescape
 from pathlib import Path
@@ -16,6 +16,7 @@ from urllib.parse import urljoin
 
 import feedparser
 
+from compat import UTC
 from config import (
     BAIDU_API_KEY,
     BAIDU_RESULT_COUNT,

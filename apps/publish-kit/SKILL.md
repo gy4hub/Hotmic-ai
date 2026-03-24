@@ -7,6 +7,13 @@ description: >
   是 HotMic AI（开麦） 套件的发布模块。
 metadata:
   openclaw:
+    commands:
+      - name: /hotmic-publish
+        description: 生成多平台发布包
+        usage: /hotmic-publish <脚本路径>
+      - name: /hotmic-feishu
+        description: 归档到飞书云文档
+        usage: /hotmic-feishu <脚本路径>
     dependencies:
       - python3
     env:
@@ -15,6 +22,14 @@ metadata:
       - publishing
       - feishu
       - content-creation
+  cowork:
+    slot: on_demand
+    requires_files: true
+    output_format: text/json
+    examples:
+      - 把这份定稿生成发布包
+      - 发到飞书归档一下
+      - 这篇内容准备发布，帮我整理物料
 ---
 
 # hotmic-publish-kit — 内容发布工具包
